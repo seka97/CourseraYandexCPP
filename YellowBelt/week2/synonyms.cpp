@@ -1,8 +1,9 @@
 #include <iostream>
 #include <string>
-#include <cassert>
 #include <map>
 #include <set>
+#include <exception>
+#include <sstream>
 
 using namespace std;
 
@@ -12,7 +13,7 @@ void AddSynonyms(Synonyms& synonyms,
 		const string& first_word, const string& second_word)
 {
 	synonyms[first_word].insert(second_word);
-	synonyms[second_word].insert(first_word);
+	synonyms[second_word].insert(second_word);
 }
 
 size_t GetSynonymsCount(Synonyms& synonyms,
@@ -27,6 +28,48 @@ bool AreSynonyms(Synonyms& synonyms,
 	return synonyms[first_word].count(second_word) == 1;
 }
 
+template <class T>
+ostream& operator<<(ostream& os, const set<T>& s) {
+	os << "{";
+	bool first = true;
+	for(const auto& i : s) {
+		if (!first) {
+			os << ", ";
+		}
+		first = false;
+		os << i;
+	}
+	return os << "}";
+}
+
+template <class K, class V>
+ostream& operator<<(ostream& os, const map<K, V>& m) {
+	os << "{";
+	bool first = true;
+	for(const auto& kv : m) {
+		if (!first) {
+			os << ", ";
+		}
+		first = false;
+		os << kv.first << ": " << kv.second;
+	}
+	return os << "}";
+}
+
+template <class T, class U>
+void AssertEqual(const T& t, const U& u, const string& hint) {
+	if (t != u) {
+		ostringstream os;
+		os << "Assertion failed: " << t << " != " << u
+				<< ". Hint: " << hint;
+		throw runtime_error(os.str());
+	}
+}
+
+void Assert(bool b, string hint) {
+	AssertEqual(b, true, hint);
+}
+
 void TestAddSynonyms() {
 	{
 		Synonyms empty;
@@ -35,7 +78,7 @@ void TestAddSynonyms() {
 				{"a", {"b"}},
 				{"b", {"a"}},
 		};
-		assert(empty == expected);
+		AssertEqual(empty, expected, "Add to empty");
 	}
 	{
 		Synonyms synonyms = {
@@ -49,7 +92,7 @@ void TestAddSynonyms() {
 				{"b", {"a", "c"}},
 				{"c", {"b", "a"}},
 		};
-		assert(synonyms == expected);
+		AssertEqual(synonyms, expected, "Add to non-empty");
 	}
 	cout << "TestAddSynonyms OK" << endl;
 }
@@ -57,7 +100,7 @@ void TestAddSynonyms() {
 void TestCount() {
 	{
 		Synonyms empty;
-		assert(GetSynonymsCount(empty, "a") == 0);
+		AssertEqual(GetSynonymsCount(empty, "a"), 0u, "count for empty");
 	}
 	{
 		Synonyms synonyms = {
@@ -65,9 +108,9 @@ void TestCount() {
 				{"b", {"a", "c"}},
 				{"c", {"b"}},
 		};
-		assert(GetSynonymsCount(synonyms, "a") == 1);
-		assert(GetSynonymsCount(synonyms, "b") == 2);
-		assert(GetSynonymsCount(synonyms, "z") == 0);
+		AssertEqual(GetSynonymsCount(synonyms, "a"), 1u, "count for a");
+		AssertEqual(GetSynonymsCount(synonyms, "b"), 2u, "count for b");
+		AssertEqual(GetSynonymsCount(synonyms, "z"), 0u, "count for z");
 	}
 	cout << "TestCount OK" << endl;
 }
@@ -76,8 +119,8 @@ void TestCount() {
 void TestAreSynonyms() {
 	{
 		Synonyms empty;
-		assert(!AreSynonyms(empty, "a", "b"));
-		assert(!AreSynonyms(empty, "b", "a"));
+		Assert(!AreSynonyms(empty, "a", "b"), "empty a b");
+		Assert(!AreSynonyms(empty, "b", "a"), "empty b a");
 	}
 	{
 		Synonyms synonyms = {
@@ -85,19 +128,23 @@ void TestAreSynonyms() {
 				{"b", {"a", "c"}},
 				{"c", {"b"}},
 		};
-		assert(AreSynonyms(synonyms, "a", "b"));
-		assert(AreSynonyms(synonyms, "b", "a"));
-		assert(AreSynonyms(synonyms, "b", "c"));
-		assert(AreSynonyms(synonyms, "c", "b"));
-		assert(!AreSynonyms(synonyms, "c", "a"));
-		assert(!AreSynonyms(synonyms, "a", "c"));
+		Assert(AreSynonyms(synonyms, "a", "b"), "");
+		Assert(AreSynonyms(synonyms, "b", "a"), "");
+		Assert(AreSynonyms(synonyms, "b", "c"), "");
+		Assert(AreSynonyms(synonyms, "c", "b"), "");
+		Assert(!AreSynonyms(synonyms, "c", "a"), "");
+		Assert(!AreSynonyms(synonyms, "a", "c"), "");
 	}
 
 	cout << "TestAreSynonyms OK" << endl;
 }
 
 void TestAll() {
+	try {
 	TestAddSynonyms();
+	} catch (runtime_error& e) {
+		cout << "TestAddSynonyms fail: " << e.what() << endl;
+	}
 	TestCount();
 	TestAreSynonyms();
 }
