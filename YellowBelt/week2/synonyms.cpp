@@ -149,6 +149,11 @@ void TestAll() {
 	TestAreSynonyms();
 }
 
+template <class TestFunc>
+void RunTest(TestFunc func) {
+	
+}
+
 int main()
 {
 	TestAll();
